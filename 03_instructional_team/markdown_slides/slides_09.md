@@ -12,56 +12,68 @@ $ echo "Data Sciences Institute"
 ```
 
 ----------
-
+<!--
 # What You Will Learn Today
 
 - How to integrate GWAS with eQTL and other functional data
-- Key tools and workflows: COLOC, Simple Sum, LocusFocus.
-- The concept and basic science of polygenic risk scores (PRS)    
-- PheWAS, pleiotropy, and biobanks
 
 -----------
-
+--->
 
 # Colocalization Analyses
 
-
-
-
 ---------
-# Genetic Association Analysis - Review
 
- $$
-g\left\{E\left[\left(\begin{array}{c}
-y_1 \\
-y_2 \\
-\vdots \\
-y_n
-\end{array}\right)\right]\right\}=\left(\begin{array}{c}
-g_{1, j} \\
-g_{2, j} \\
-\vdots \\
-g_{n, j}
-\end{array}\right) \beta_j+\left(\begin{array}{ccc}
-x_{1,1} & \cdots & x_{1, q} \\
-\vdots & \ddots & \vdots \\
-x_{n, 1} & \cdots & x_{n, q}
-\end{array}\right)\left(\begin{array}{c}
-\gamma_1 \\
-\gamma_2 \\
-\vdots \\
-\gamma_q
-\end{array}\right)
+# Review - Genetic Association Analysis
+
+For SNP $j$:
+- Binary traits (logistic):
+
+$$
+\log \frac{P[Y \mid X]}{1-P[Y \mid X]}=\alpha+X \beta_j + C\alpha
 $$
 
-- $y_i$ : phenotype for $i^{\text {th }}$ individual
-- $g_{i, j}$ : genotype for $i^{\text {th }}$ individual at $j^{\text {th }}$ SNP; $g_{i j}=0,1$ or 2
-- $x_{i, j}$ : other covariates
+- Continuous traits (linear):
+
+$$
+E[Y \mid X]=\alpha+X \beta_j + C\alpha
+$$
+
+- $X=$ coded genotype (additive, dominant, recessive, etc.)
+- $C=$ covariates
+- Tests genetic effect $H_0: \beta_{j}=0$.
+
+------
+
+# Review - Genetic Association Analysis
+
+- $H_0: \beta_{j}=0$,
+$$ 
+Z_{j}= \frac{\hat{\beta_{j}}-0}{S E(\hat{\beta_{j}})}.
+$$ 
+
+- Wald test:
+
+$$
+T_j=\left(\frac{\hat{\beta_{j}}-0}{S E(\hat{\beta_{j}})}\right)^2 \sim \chi^2_{(1)} . 
+$$
+
 - Repeat the regression analysis ( $H_0: \beta_j=0$ ) for $j=1,2, \ldots, M$. 
   $\rightarrow$ GWAS summary statistics: $Z=\left(Z_1, Z_2, \ldots Z_m\right)$.
 
 
 ----------
+
+
+# Review - Genes 
+- **Gene sizes vary** from about 1K DNA base pairs to more than 1 million bp.
+- About **20,000 - 30,000 genes** throughout the genome.
+- Genes themselves do not directly affect traits.
+- Proteins - the coded product of genes - are the ones influencing traits.
+- Through the processes of **transcription** and **translation**, information from genes is used to make proteins. 
+![bg right:40% w:500](./images/genes_traits.png)
+
+---------
 
 # Expression Quantitative Trait Loci (eQTL)
 
@@ -93,6 +105,65 @@ eQTL study:
 
 
 --------
+
+# Methods to Integrate GWAS and eQTL Data
+
+- **Bayesian approaches** aim to identify shared causal variants contributes to both the disease outcome and gene expression variation.
+  - **COLOC , eCAVIAR, GWAS-PW**.etc.
+- **Frequentist-based methods:**
+- Methods that impute gene expression based on a reference, and then associate imputed expression with the trait:
+  - **PrediXcan and TWAS**
+- Integration methods based on Mendelian randomization:
+  - **SMR, SMR-multi**, etc.
+- Overlapping pattern:
+  - **Simple Sum2**
+
+
+---------
+
+# Simple Sum
+
+- A frequentist integration method that combines GWAS and eQTL signals within a locus.
+- Particularly powerful in regions with high LD and allelic heterogeneity (multiple causal variants).
+- The extension Simple Sum 2 (SS2) can handle meta-analysis / sample relatedness.
+
+---------
+
+# Simple Sum
+  
+- Step 1. SNPs with eQTL evidence above the threshold are classified as **eQTL SNPs**, while the rest are treated as **non-eQTL SNPs**.
+    ![Sales Figure, w:800](./images/coloc_ss1.png)
+
+----------
+
+# Simple Sum
+
+- Step 2. Calculate the average GWAS association for the eQTL SNPs (those above the threshold).
+
+- Step 3. Calculate the average GWAS association for the non-eQTL SNPs (those below the threshold).
+    ![Sales Figure, w:600](./images/coloc_ss2.png)
+    
+------------    
+
+# Simple Sum
+
+- Step 4. Take the **difference between these two averages**.
+
+- **A large positive difference** means that SNPs with strong eQTL evidence also tend to have stronger GWAS signals. This suggests colocalization between GWAS and eQTL signals.
+
+   ![Sales Figure, w:600](./images/coloc_ss2.png)
+------------
+
+# Simple Sum
+
+- Instead of choosing an arbitrary threshold for eQTL evidence, we set the threshold based on the **average level of eQTL evidence** across SNPs.
+
+- We assess the distribution of this difference and compute a p-value. A small p-value suggests strong evidence of colocalization.
+  
+  ![Sales Figure, w:600](./images/coloc_ss2.png)
+  
+----------
+<!--
 
 # Composite Null Hypothesis
 
@@ -128,23 +199,8 @@ Consider a locus where:
 Question:
 1. Why might the lead GWAS SNP and the lead eQTL SNP be different
    even if there is a shared causal variant?
-
----------
-
-# Methods to Integrate GWAS and eQTL Data
-
-- **Bayesian approaches** aim to identify shared causal variants contributes to both the disease outcome and gene expression variation.
-  - **COLOC , eCAVIAR, GWAS-PW**.etc.
-- **Frequentist-based methods:**
-- Methods that impute gene expression based on a reference, and then associate imputed expression with the trait:
-  - **PrediXcan and TWAS**
-- Integration methods based on Mendelian randomization:
-  - **SMR, SMR-multi**, etc.
-- Overlapping pattern:
-  - **Simple Sum2**
-
-
 ------
+
 
 # COLOC
 
@@ -307,6 +363,8 @@ Limitations:
 - $T$ behaves like a **weighted sum of independent $\chi^2_{1}$ variables**,  with weights are the eigenvalues $d_j$ of matrix $\Sigma^{1/2} A \Sigma^{1/2}$.
 ---
 
+
+
 # Simple Sum 
 
 [Gong*, Wang*, Xiao*, et al., 2019. PLOS Genetics.]
@@ -322,9 +380,7 @@ Limitations:
 
 - $\boldsymbol{S S}=\sum_{\boldsymbol{j}} Z_j^2\left[\frac{\boldsymbol{T}_{\boldsymbol{j}}^2-\frac{\sum_{\boldsymbol{j}} \boldsymbol{T}_{\boldsymbol{j}}^2}{\boldsymbol{m}}}{\left(\sum_{\boldsymbol{j}} \boldsymbol{T}_{\boldsymbol{j}}^2-\frac{\sum_{\boldsymbol{j}} \boldsymbol{T}_{\boldsymbol{j}}^2}{\boldsymbol{m}}\right)^2}\right]=Z^{\prime} \boldsymbol{A} Z, ~ A=\operatorname{diag}\left(a_j\right), a_j=\left[\frac{T_j^2-\frac{\sum_j T_j^2}{m}}{\left(\sum_j T_j^2-\frac{\sum_j T_j^2}{m}\right)^2}\right].$
 
-
   ![Sales Figure, w:1000](./images/ss_type1.png)
-
 --------
 
 
@@ -332,12 +388,10 @@ Limitations:
 
 - Stage 1: Formally test eQTLs by $\sum_{j=1}^m T_j^2$.
 
-- Under the null of no eQTLs ( $H_{01}$ and $H_{03}$ ), $\sum_{j=1}^m T_j^2 \sim \sum_{j=1}^m f_j \chi_1^2$, where $f_j^{\prime} s$ are the eigenvalues of $\Sigma$ (LD matrix).
+- Under the null of no eQTLs, $\sum_{j=1}^m T_j^2 \sim \sum_{j=1}^m f_j \chi_1^2$, where $f_j^{\prime} s$ are the eigenvalues of $\Sigma$ (LD matrix).
 
-- Stage 2: Perform the Simple Sum test $\sum_j Z_j^2\left[\frac{T_j^2-\frac{\sum_j T_j^2}{m}}{\left(\sum_j T_j^2-\frac{\sum_j T_j^2}{m}\right)^2}\right]$.
+- Stage 2: Perform the Simple Sum test.
 
-- The type I error rate for a single test under composite null hypothesis is controlled at $\alpha$.
-- Bounded by the maximum type $I$ error rates for the stage 1 and the stage 2 test.
 
 -------
 
@@ -349,8 +403,9 @@ Limitations:
 - Sample overlap: explicitly account for overlap/relatedness between GWAS and eQTL cohorts, adjusting cross-study correlations when performing inference.
 
 
-
 --------
+
+--->
 
 # LocusFocus 
 
@@ -378,13 +433,14 @@ Limitations:
   ![Sales Figure, w:1200](./images/locusfocus_output.png)
   
 ---------
-
+<!--
 
 # [Demo of LocusFocus](https://locusfocus.research.sickkids.ca/) 
 
 
 
 ---------
+
 
 # Discussion: What can colocalization tell us (and not tell us)?
 
@@ -396,7 +452,7 @@ Questions:
 2. What additional data or analyses would you want before declaring gene X causal?
 
 ------
-
+--->
 
 <!--
 
