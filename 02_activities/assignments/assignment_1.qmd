@@ -1,6 +1,9 @@
 ---
 title: "Assignment #1"
 format: html
+knitr:
+  opts_chunk: 
+    engine.path: "C:/Program Files/Git/usr/bin/bash.exe"
 ---
 
 ## Assignment 1
@@ -17,95 +20,196 @@ You will need to install PLINK and run the analyses. Please follow the OS-specif
 
 Before fitting any models, it is essential to understand the data. Use R or bash code to answer the following questions about the `gwa.qc.A1.fam`, `gwa.qc.A1.bim`, and `gwa.qc.A1.bed` files, available at the following Google Drive link: <https://drive.google.com/drive/folders/11meVqGCY5yAyI1fh-fAlMEXQt0VmRGuz?usp=drive_link>. Please download all three files from this link and place them in `02_activities/data/`.
 
+```{r setup, include=FALSE}
+# Set up a consistent path for all chunks of code
+knitr::opts_knit$set(root.dir = normalizePath("../../"))
+```
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+library(data.table)
+library(ggplot2)
+library(seqminer)
+library(HardyWeinberg)
+library(dplyr)
+```
+
 (i) Read the .fam file. How many samples does the dataset contain?
 
-```         
-# Your answer here...
+```{bash}
+pwd
+head ./02_activities/data/gwa.qc.A1.fam  
 ```
+
+```{bash}
+wc -l <./02_activities/data/gwa.qc.A1.fam  
+```
+
+# Answer: 4000
 
 (ii) What is the 'variable type' of the response variable (i.e.Continuous or binary)?
 
-```         
-# Your answer here...
-```
+        
+# Answer: Continuous
 
 (iii) Read the .bim file. How many SNPs does the dataset contain?
 
-```         
-# Your answer here...
+```{bash}
+head ./02_activities/data/gwa.qc.A1.bim
 ```
+
+```{bash}
+wc -l ./02_activities/data/gwa.qc.A1.bim
+```
+
+         
+# Answer: 101083
+
 
 #### Question 2: Allele Frequency Estimation
 
 (i) Load the genotype matrix for SNPs rs1861, rs3813199, rs3128342, and rs11804831 using additive coding. What are the allele frequencies (AFs) for these four SNPs?
 
-```         
-# Your code here...
+```{bash, message=FALSE, warning=FALSE}
+# Create SNP list file with 4 example SNPs
+printf "%s\n" rs1861 rs3813199 rs3128342 rs11804831 > ./02_activities/data/snplist_A1.txt
 ```
 
-(ii) What are the minor allele frequencies (MAFs) for these four SNPs?
+```{bash, results='hide', message=FALSE, warning=FALSE}
+plink2 --bfile ./02_activities/data/gwa.qc.A1 \
+   --extract ./02_activities/data/snplist_A1.txt  \
+   --freq \
+   --out ./02_activities/data/gwa_qc_freq_A1
+```
 
-```         
-# Your code here...
+```{r}
+freq <- fread("./02_activities/data/gwa_qc_freq_A1.afreq")
+freq 
+```
+
+# Answer: 
+rs3813199   0.0569126
+rs11804831  0.1543410
+rs3128342   0.3051210
+rs1861      0.0539859
+
+# MAF
+```{r}
+freq[, MAF := pmin(ALT_FREQS, 1 - ALT_FREQS)]
+freq
 ```
 
 #### Question 3: Hardy–Weinberg Equilibrium (HWE) Test
 
 (i) Conduct the Hardy–Weinberg Equilibrium (HWE) test for all SNPs in the .bim file. Then, load the file containing the HWE p-value results and display the first few rows of the resulting data frame.
+        
+```{bash, results='hide', message=FALSE, warning=FALSE}
+plink2 --bfile ./02_activities/data/gwa.qc.A1 \
+   --hardy \
+   --out ./02_activities/data/gwa_qc_hwe_A1
+```
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}
+hwe <- fread("./02_activities/data/gwa_qc_hwe_A1.hardy")
+head(hwe)
 ```
 
 (ii) What are the HWE p-values for SNPs rs1861, rs3813199, rs3128342, and rs11804831?
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}
+snps <-c("rs1861", "rs3813199", "rs3128342", "rs11804831")
+hwe_snps <- hwe[ID %in% snps]
+hwe_snps[, .(ID, P)]
 ```
+
+# Answer:
+      ID        P
+       <char>    <num>
+1:  rs3813199 1.000000
+2: rs11804831 0.113354
+3:  rs3128342 0.330273
+4:     rs1861 0.274719
+
 
 #### Question 4: Genetic Association Test
 
 (i) Conduct a linear regression to test the association between SNP rs1861 and the phenotype. What is the p-value?
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}         
+geno_subset_A1.1 <- fread("./02_activities/data/geno.additive_A1.raw")
 ```
+
+```{r, message=FALSE, warning=FALSE}         
+colnames(geno_subset_A1.1)
+```
+
+```{r, message=FALSE, warning=FALSE}         
+geno_subset_A1.1 <- na.omit(geno_subset_A1.1)
+geno_subset_A1.1$PHENOTYPE <- geno_subset_A1.1$PHENOTYPE - 1
+```
+
+```{r, message=FALSE, warning=FALSE}         
+linearmodel_add <-lm(PHENOTYPE ~ rs1861_C, data = geno_subset_A1.1)
+summary(linearmodel_add)
+```
+
+# Answer: <2e-16 
 
 (ii) How would you interpret the beta coefficient from this regression?
 
-```         
-# Your answer here...
-```
+# Beta coefficient:  0.96698. For each additional copy of the C allele at rs1861,  the phenotype increases in approximately 0.97 units in the phenotype
+
+
+
 
 (iii) Plot the scatterplot of phenotype versus the genotype of SNP rs1861. Add the regression line to the plot.
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}         
+ggplot(geno_subset_A1.1, aes(x = rs1861_C, y = PHENOTYPE)) +
+  geom_point() +
+  geom_smooth(method= "lm", se = FALSE) +
+  labs(x= "Genotype (rs1861)", y = "Phenotype")
 ```
 
 (iv) Convert the genotype coding for rs1861 to recessive coding.
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}         
+geno_subset_A1.1$rs1861_rec <- ifelse(geno_subset_A1.1$rs1861_C == 2, 1, 0)
+table(geno_subset_A1.1$rs1861_rec)
 ```
+
 
 (v) Conduct a linear regression to test the association between the recessive-coded rs1861 and the phenotype. What is the p-value?
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}         
+linearmodel_rec <-lm(PHENOTYPE ~ rs1861_rec, data = geno_subset_A1.1)
+summary(linearmodel_rec)
 ```
+
+# Answer: The p-value is <2e-16
 
 (vi) Plot the scatterplot of phenotype versus the recessive-coded genotype of rs1861. Add the regression line to the plot.
 
-```         
-# Your code here...
+```{r, message=FALSE, warning=FALSE}         
+ggplot(geno_subset_A1.1, aes(x = rs1861_rec, y = PHENOTYPE)) +
+  geom_point() +
+  geom_smooth(method= "lm", se = FALSE) +
+  labs(x= "Genotype (rs1861)", y = "Phenotype")
 ```
+
 
 (vii) Which model fits better? Justify your answer.
 
-```         
-# Your answer here...
+```{r, message=FALSE, warning=FALSE} 
+AIC(linearmodel_add, linearmodel_rec)
 ```
+
+# AIC:
+df      AIC
+linearmodel_add  3 10988.06
+linearmodel_rec  3 11000.02
+> 
+
+# Answer: According to the AIC, the additive model fits better as it has a lower AIC value (10988.06), compared to the recessive model, indicating a better balance between model fit and complexity.
 
 ### Criteria
 
